@@ -19,15 +19,14 @@ namespace CSCore.Ffmpeg
     {
         private readonly object _lockObject = new object();
         private readonly Uri _uri;
+        private readonly FfmpegProcessingOptions _options;
         private FfmpegStream _ffmpegStream;
         private AvFormatContext _formatContext;
-        private bool _disposeStream = false;
 
         private byte[] _overflowBuffer = new byte[0];
         private int _overflowCount;
         private int _overflowOffset;
         private long _position;
-        private Stream _stream;
 
         /// <summary>
         /// Gets a dictionary with found metadata.
@@ -56,27 +55,23 @@ namespace CSCore.Ffmpeg
         /// </exception>
         /// <exception cref="ArgumentNullException">uri</exception>
         public FfmpegDecoder(string url)
+            : this(url, null)
         {
-            const int invalidArgument = unchecked((int) 0xffffffea);
+        }
 
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="FfmpegDecoder" /> class based on a specified filename or url,
+        ///     choosing between CSCore and FFmpeg for the audio processing steps.
+        /// </summary>
+        /// <param name="url">A url containing a filename or web url. </param>
+        /// <param name="options">The processing options, or <c>null</c> to use <see cref="FfmpegProcessingOptions.Default" />.</param>
+        /// <exception cref="FfmpegException">Any ffmpeg error.</exception>
+        public FfmpegDecoder(string url, FfmpegProcessingOptions options)
+        {
+            _options = options ?? FfmpegProcessingOptions.Default;
             _uri = new Uri(url);
-            try
-            {
-                _formatContext = new AvFormatContext(url);
-                Initialize();
-            }
-            catch (FfmpegException ex)
-            {
-                if (ex.ErrorCode == invalidArgument && "avformat_open_input".Equals(ex.Function, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!TryInitializeWithFileAsStream(url))
-                        throw;
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            _formatContext = new AvFormatContext(url, _options);
+            Initialize();
         }
 
         /// <summary>
@@ -93,11 +88,27 @@ namespace CSCore.Ffmpeg
         ///     Audio Sample Format not supported.
         /// </exception>
         public FfmpegDecoder(Stream stream)
+            : this(stream, null)
+        {
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="FfmpegDecoder" /> class based on a <see cref="Stream" />,
+        ///     choosing between CSCore and FFmpeg for the audio processing steps.
+        /// </summary>
+        /// <param name="stream">The stream.</param>
+        /// <param name="options">The processing options, or <c>null</c> to use <see cref="FfmpegProcessingOptions.Default" />.</param>
+        /// <exception cref="FfmpegException">Any ffmpeg error.</exception>
+        /// <exception cref="System.ArgumentNullException">stream</exception>
+        public FfmpegDecoder(Stream stream, FfmpegProcessingOptions options)
         {
             if (stream == null)
                 throw new ArgumentNullException("stream");
 
-            InitializeWithStream(stream, false);
+            _options = options ?? FfmpegProcessingOptions.Default;
+            _ffmpegStream = new FfmpegStream(stream);
+            _formatContext = new AvFormatContext(_ffmpegStream, _options);
+            Initialize();
         }
 
         /// <summary>
@@ -224,12 +235,6 @@ namespace CSCore.Ffmpeg
 
             if (disposing)
             {
-                if (_disposeStream && _stream != null)
-                {
-                    _stream.Dispose();
-                    _stream = null;
-                }
-
                 if (_formatContext != null)
                 {
                     _formatContext.Dispose();
@@ -247,38 +252,6 @@ namespace CSCore.Ffmpeg
         private void Initialize()
         {
             WaveFormat = _formatContext.SelectedStream.GetSuggestedWaveFormat();
-        }
-
-        private void InitializeWithStream(Stream stream, bool disposeStream)
-        {
-            _stream = stream;
-            _disposeStream = disposeStream;
-
-            _ffmpegStream = new FfmpegStream(stream, false);
-            _formatContext = new AvFormatContext(_ffmpegStream);
-            Initialize();
-        }
-
-        private bool TryInitializeWithFileAsStream(string filename)
-        {
-            if (!File.Exists(filename))
-                return false;
-
-            Stream stream = null;
-            try
-            {
-                stream = File.OpenRead(filename);
-                InitializeWithStream(stream, true);
-                return true;
-            }
-            catch (Exception)
-            {
-                if (stream != null)
-                {
-                    stream.Dispose();
-                }
-                return false;
-            }
         }
 
         /// <summary>

@@ -24,7 +24,7 @@ namespace CSCore.Ffmpeg
         /// <summary>
         /// Gets a list of the common codecs.
         /// </summary>
-        public ReadOnlyCollection<AvCodecId> Codecs { get; private set; }
+        public ReadOnlyCollection<AVCodecID> Codecs { get; private set; }
 
         /// <summary>
         /// Gets a list with the common file extensions of the format.

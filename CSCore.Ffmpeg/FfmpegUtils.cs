@@ -57,6 +57,16 @@ namespace CSCore.Ffmpeg
         }
 
         /// <summary>
+        /// Gets the names of all available FFmpeg audio encoders. Any of these names can be passed as the
+        /// <c>codecName</c> argument of the <see cref="FfmpegEncoder"/>.
+        /// </summary>
+        /// <returns>The available audio encoder names.</returns>
+        public static IEnumerable<string> GetAudioEncoderNames()
+        {
+            return FfmpegCalls.GetEncoderNames(AVMediaType.AVMEDIA_TYPE_AUDIO);
+        }
+
+        /// <summary>
         /// Gets or sets the log level.
         /// </summary>
         /// <value>
@@ -83,7 +93,7 @@ namespace CSCore.Ffmpeg
         /// </value>
         public static bool LogToDefaultLogger { get; set; }
 
-        private static unsafe void OnLogMessage(void* ptr, int level, byte* fmt, IntPtr vl)
+        private static unsafe void OnLogMessage(void* ptr, int level, string fmt, byte* vl)
         {
             lock (LockObj)
             {
@@ -121,7 +131,7 @@ namespace CSCore.Ffmpeg
 
 
                     int printPrefix = 1;
-                    string line = FfmpegCalls.FormatLine(ptr, level, Marshal.PtrToStringAnsi((IntPtr)fmt), vl, ref printPrefix);
+                    string line = FfmpegCalls.FormatLine(ptr, level, fmt, vl, ref printPrefix);
 
                     eventHandler(null,
                         new FfmpegLogReceivedEventArgs(avClass, parentLogContext, (LogLevel) level, line, ptr, parentpp));

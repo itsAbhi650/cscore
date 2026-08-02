@@ -13,10 +13,6 @@ namespace CSCore.Ffmpeg.Interops
     {
     }
 
-    internal struct _iobuf // FILE
-    {
-    }
-
     internal struct size_t
     {
         internal uint Value;

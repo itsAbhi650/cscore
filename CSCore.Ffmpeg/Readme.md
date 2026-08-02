@@ -1,4 +1,32 @@
-﻿## Using the Project ##
+﻿# Changelog
+
+### FFmpeg 8.x Upgrade &mdash; <sub>2026-08-02</sub>
+
+Upgraded the FFmpeg integration from **3.x to 8.x** (`avcodec-62`, `avformat-62`, `avutil-60`, `swresample-6`) and added new capabilities. CSCore's internal DSP is untouched &mdash; every FFmpeg feature below is opt-in.
+
+**Interop**
+- Replaced the vendored FFmpeg 3.x interop with the latest FFmpeg.AutoGen 8.x sources (Dynamically Linked / `DllImport`).
+- Removed old generated files (`FFmpeg.avcodec/avformat/avutil/swresample.g.cs`) and swapped the shipped native DLLs to the 8.x set.
+
+**API migration**
+- Decode via `codecpar` + a self-allocated `AVCodecContext` (replaces the removed `AVStream.codec`).
+- `avcodec_decode_audio4` &rarr; `avcodec_send_packet` / `avcodec_receive_frame`.
+- Heap-allocated packets (`av_packet_alloc`/`free`); channel handling via `AVChannelLayout`.
+- `av_muxer_iterate` / `av_demuxer_iterate`, `av_dict_iterate` metadata, new log-callback signature.
+
+**Fixes**
+- Flush the decoder (and reset the resampler) on every seek to avoid stale samples.
+- `CanSeek` is now derived from the source + `ctx_flags` instead of the unreliable `pb->seekable`.
+- Config section read is resilient on modern .NET (optional `<ffmpeg>` section no longer breaks init).
+
+**New features**
+- Selectable resampling: `FfmpegProcessingOptions` / `AudioProcessor` let callers pick CSCore or FFmpeg (libswresample) for rate/format/channel conversion, with per-decoder or global defaults.
+- `FfmpegEncoder`: encode to any FFmpeg audio codec/container (MP3, AAC, FLAC, &hellip;) with `EncodeWholeSource`/`CreateMP3Encoder` helpers.
+- `FfmpegUtils.GetAudioEncoderNames()` to discover valid encoder names.
+
+---
+
+## Using the Project ##
 Make sure that the directory with the native libraries is placed correctly within the folder with your assembly.
 
 ### Linux & Mono ###

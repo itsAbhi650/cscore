@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using CSCore.Ffmpeg.Interops;
 
 namespace CSCore.Ffmpeg
@@ -9,6 +10,8 @@ namespace CSCore.Ffmpeg
     {
         private unsafe AVFormatContext* _formatContext;
         private AvStream _stream;
+        private readonly FfmpegProcessingOptions _options;
+        private readonly bool _sourceSeekable;
 
         public unsafe IntPtr FormatPtr
         {
@@ -26,9 +29,12 @@ namespace CSCore.Ffmpeg
         {
             get
             {
-                if (_formatContext == null || _formatContext->pb == null)
+                if (_formatContext == null)
                     return false;
-                return _formatContext->pb->seekable == 1;
+                //the demuxer flags genuinely unseekable inputs (e.g. some live streams)
+                if ((_formatContext->ctx_flags & ffmpeg.AVFMTCTX_UNSEEKABLE) != 0)
+                    return false;
+                return _sourceSeekable;
             }
         }
 
@@ -58,7 +64,14 @@ namespace CSCore.Ffmpeg
         public Dictionary<string,string> Metadata { get; private set; }
 
         public unsafe AvFormatContext(FfmpegStream stream)
+            : this(stream, null)
         {
+        }
+
+        public unsafe AvFormatContext(FfmpegStream stream, FfmpegProcessingOptions options)
+        {
+            _options = options ?? FfmpegProcessingOptions.Default;
+            _sourceSeekable = stream.CanSeek;
             _formatContext = FfmpegCalls.AvformatAllocContext();
             fixed (AVFormatContext** pformatContext = &_formatContext)
             {
@@ -68,7 +81,14 @@ namespace CSCore.Ffmpeg
         }
 
         public unsafe AvFormatContext(string url)
+            : this(url, null)
         {
+        }
+
+        public unsafe AvFormatContext(string url, FfmpegProcessingOptions options)
+        {
+            _options = options ?? FfmpegProcessingOptions.Default;
+            _sourceSeekable = true; //local files and range-capable URLs are seekable; the demuxer vetoes live streams via ctx_flags
             _formatContext = FfmpegCalls.AvformatAllocContext();
             fixed (AVFormatContext** pformatContext = &_formatContext)
             {
@@ -81,15 +101,17 @@ namespace CSCore.Ffmpeg
         {
             FfmpegCalls.AvFormatFindStreamInfo(_formatContext);
             BestAudioStreamIndex = FfmpegCalls.AvFindBestStreamInfo(_formatContext);
-             _stream = new AvStream((IntPtr)_formatContext->streams[BestAudioStreamIndex]);
+             _stream = new AvStream((IntPtr)_formatContext->streams[BestAudioStreamIndex], _options);
 
             Metadata = new Dictionary<string, string>();
             if (_formatContext->metadata != null)
             {
-                var metadata = _formatContext->metadata->Elements;
-                foreach (var element in metadata)
+                AVDictionaryEntry* entry = null;
+                while ((entry = ffmpeg.av_dict_iterate(_formatContext->metadata, entry)) != null)
                 {
-                    Metadata.Add(element.Key, element.Value);
+                    var key = Marshal.PtrToStringAnsi((IntPtr)entry->key);
+                    if (key != null)
+                        Metadata[key] = Marshal.PtrToStringAnsi((IntPtr)entry->value);
                 }
             }
         }
@@ -100,6 +122,9 @@ namespace CSCore.Ffmpeg
             var time = seconds * streamTimeBase.den / streamTimeBase.num;
 
             FfmpegCalls.AvFormatSeekFile(this, time);
+
+            //discard buffered decoder/resampler state so no stale samples leak out after the seek
+            SelectedStream.FlushBuffers();
         }
 
         public unsafe void Dispose()
