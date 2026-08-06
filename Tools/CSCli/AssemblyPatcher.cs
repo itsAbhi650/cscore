@@ -118,6 +118,7 @@ namespace CSCli
                         {
                             //get the called method
                             MethodReference methodDescription = (MethodReference)instruction.Operand;
+
                             //get the attributes of the called method
 
                             var attributes = GetAttributes(methodDescription.Resolve());
@@ -157,6 +158,11 @@ namespace CSCli
                             }
                         } catch (Exception e)
                         {
+                            if (e.Message != null && e.Message.IndexOf("System.Drawing.Common", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                continue;
+                            }
+
                             MessageIntegration.WriteWarning("Failure to resolve method ");
                             MessageIntegration.WriteWarning("Reason: " + e.Message);
                         }

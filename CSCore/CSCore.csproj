@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net472;net48</TargetFrameworks>
     <OutputType>Library</OutputType>
     <SccProjectName>SAK</SccProjectName>
     <SccLocalPath>SAK</SccLocalPath>
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <LangVersion>latest</LangVersion>
     <AssemblyTitle>CSCore</AssemblyTitle>
     <Description>.NET Sound Library for .NET Core 8+</Description>
     <Product>CSCore-Core</Product>
@@ -19,7 +20,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseVSHostingProcess>true</UseVSHostingProcess>
     <DocumentationFile>bin\Debug\CSCore.XML</DocumentationFile>
-    <NoWarn>1573</NoWarn>
+    <NoWarn>1573;1591</NoWarn>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -100,11 +101,17 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <PackageReference Include="System.DirectoryServices" Version="8.0.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.6" />
     <!--<PackageReference Include="System.Drawing.Common" Version="8.0.6" /> --> 
+  </ItemGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <Reference Include="System.DirectoryServices" />
   </ItemGroup>
   <PropertyGroup>
  
@@ -119,7 +126,7 @@
     <PackageProjectUrl>https://github.com/profK/cscore-core</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/profK/cscore-core</RepositoryUrl>
-    <PackageTags>.net;.net8;audio</PackageTags>
+    <PackageTags>.net;.net8;net472;net48;audio</PackageTags>
     <PackageReleaseNotes>Release Status: 1.0.1beta now can use CodecFactory to create a codec that reads its data from a provided stream.
 
 Release Status: 1.0beta Compiling in .NET8 and seemingly working but not fully tested</PackageReleaseNotes>
@@ -128,8 +135,79 @@ Release Status: 1.0beta Compiling in .NET8 and seemingly working but not fully t
     <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
     <AnalysisLevel>none</AnalysisLevel>
   </PropertyGroup>
-  <Target Name="PostBuild" AfterTargets="Build" Condition="false">
-    <Message Importance="High" Text="Skipping legacy post-build step." />
-    <Exec Command="@echo on; &#xD;&#xA;setLocal EnableDELAYedeXpansion&#xD;&#xA;chcp 65001&#xD;&#xA;&#xD;&#xA;set errorCode=0&#xD;&#xA;&#xD;&#xA;set target=$(TargetPath)&#xD;&#xA;echo Targetpath = $(TargetPath)&#xD;&#xA;set project=$(ProjectPath)&#xD;&#xA;echo Projectpath = $(ProjectPath)&#xD;&#xA;     &#xD;&#xA;&#xD;&#xA;set sdk=%25PROGRAMFILES(x86)%25\Microsoft SDKs\Windows\v8.1A\bin\NETFX 4.5.1 Tools&#xD;&#xA;set framework=%25WINDIR%25\Microsoft.NET\Framework\v2.0.50727&#xD;&#xA;set inlineILCompiler=$(SolutionDir)Tools\InlineILCompiler\InlineILCompiler\bin\$(Configuration)\net8.0\InlineILCompiler.exe&#xD;&#xA;set cscli=$(SolutionDir)Tools\CSCli\bin\$(Configuration)\net8.0\CSCli.exe&#xD;&#xA;&#xD;&#xA;IF exist &quot;%25sdk%25\.&quot; (&#xD;&#xA;  echo OK: The Microsoft Windows SDK was found.&#xD;&#xA;) else (&#xD;&#xA;   echo FAILED: The Microsoft Windows SDK Dir was not found. Check the following path: &quot;%25sdk%25&quot;&#xD;&#xA;   goto EXIT_ERR&#xD;&#xA;)&#xD;&#xA;IF exist &quot;%25framework%25\.&quot; (&#xD;&#xA;  echo OK: The .NET Framework Dir was found.&#xD;&#xA;) else (&#xD;&#xA;    echo FAILED: The Framework-Dir was not found. Check the following path: &quot;%25framework%25&quot;&#xD;&#xA;    goto EXIT_ERR&#xD;&#xA;)&#xD;&#xA;IF exist &quot;%25inlineILCompiler%25&quot; (&#xD;&#xA;  echo OK: Found the inline-il-compiler.&#xD;&#xA;) else (&#xD;&#xA;  echo FAILED: The inline-il-compiler was not found. Check the following path: &quot;%25inlineILCompiler%25&quot;&#xD;&#xA;  goto EXIT_ERR&#xD;&#xA;)&#xD;&#xA;IF exist &quot;%25cscli%25&quot; (&#xD;&#xA;  echo OK: Found the cscli-compiler at &quot;%25cscli%25&quot;&#xD;&#xA;) else (&#xD;&#xA;  echo FAILED: The cscli was not found. Check the following path: &quot;%25cscli%25&quot;&#xD;&#xA;  goto EXIT_ERR&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;if $(Configuration) == Debug (&#xD;&#xA;  echo Build-Configuration: DEBUG&#xD;&#xA;  echo    DEBUG=IMPL&#xD;&#xA;  echo    NO OPTIMIZE&#xD;&#xA;  set ilasm_args=/DLL /DEBUG=IMPL&#xD;&#xA;) else (&#xD;&#xA;  if $(Configuration) == Release (&#xD;&#xA;    echo Build-Configuration: RELEASE&#xD;&#xA;    echo    NO DEBUG&#xD;&#xA;    echo    OPTIMIZE&#xD;&#xA;    set ilasm_args=/DLL /OPTIMIZE&#xD;&#xA;  ) else (&#xD;&#xA;    echo FAILED: Invalid Configuration.&#xD;&#xA;    goto EXIT_ERR&#xD;&#xA;  ) &#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;echo.&#xD;&#xA;echo.&#xD;&#xA;echo Calling the inline-il-compiler ...&#xD;&#xA;call &quot;%25inlineILCompiler%25&quot;&#xD;&#xA;&#xD;&#xA;echo.&#xD;&#xA;echo.&#xD;&#xA;echo Calling CSCli ...&#xD;&#xA;call &quot;%25cscli%25&quot; -file:&quot;$(TargetPath)&quot; -r:&quot;RemoveObjAttribute&quot; -c:&quot;CSCalliAttribute&quot;&#xD;&#xA;:EXIT&#xD;&#xA;EXIT /B %25errorCode%25&#xD;&#xA;&#xD;&#xA;:EXIT_ERR&#xD;&#xA;set errorCode=-1&#xD;&#xA;goto EXIT" />
-  </Target>
+  <PropertyGroup>
+    <PostBuildEvent>
+      @echo off &amp; setLocal EnableDELAYedeXpansion
+      chcp 65001
+
+      set errorCode=0
+
+      set target=$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).dll
+      set project=$(MSBuildProjectFullPath)
+
+      set sdk=%25PROGRAMFILES(x86)%25\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.7.2 Tools
+      set framework=%25WINDIR%25\Microsoft.NET\Framework\v4.0.30319
+      set inlineILCompiler=$(MSBuildProjectDirectory)\..\Tools\InlineILCompiler\InlineILCompiler\bin\$(Configuration)\net8.0\InlineILCompiler.exe
+      set cscli=$(MSBuildProjectDirectory)\..\Tools\CSCli\bin\$(Configuration)\net8.0\CSCli.exe
+
+      IF exist "%25sdk%25\." (
+      echo OK: The Microsoft Windows SDK was found.
+      ) else (
+      echo FAILED: The Microsoft Windows SDK Dir was not found. Check the following path: "%25sdk%25"
+      goto EXIT_ERR
+      )
+      IF exist "%25framework%25\." (
+      echo OK: The .NET Framework Dir was found.
+      ) else (
+      echo FAILED: The Framework-Dir was not found. Check the following path: "%25framework%25"
+      goto EXIT_ERR
+      )
+      IF exist "%25inlineILCompiler%25" (
+      echo OK: Found the inline-il-compiler.
+      ) else (
+      echo FAILED: The inline-il-compiler was not found. Check the following path: "%25inlineILCompiler%25"
+      goto EXIT_ERR
+      )
+      IF exist "%25cscli%25" (
+      echo OK: Found the cscli-compiler.
+      ) else (
+      echo FAILED: The cscli was not found. Check the following path: "%25cscli%25"
+      goto EXIT_ERR
+      )
+
+      if $(Configuration) == Debug (
+      echo Build-Configuration: DEBUG
+      echo    DEBUG=IMPL
+      echo    NO OPTIMIZE
+      set ilasm_args=/DLL /DEBUG=IMPL
+      ) else (
+      if $(Configuration) == Release (
+      echo Build-Configuration: RELEASE
+      echo    NO DEBUG
+      echo    OPTIMIZE
+      set ilasm_args=/DLL /OPTIMIZE
+      ) else (
+      echo FAILED: Invalid Configuration.
+      goto EXIT_ERR
+      )
+      )
+
+      echo.
+      echo.
+      echo Calling the inline-il-compiler ...
+      call "%25inlineILCompiler%25"
+
+      echo.
+      echo.
+      echo Calling CSCli ...
+      call "%25cscli%25" -file:"%25target%25" -r:"RemoveObjAttribute" -c:"CSCalliAttribute"
+
+      :EXIT
+      EXIT /B %25errorCode%25
+
+      :EXIT_ERR
+      set errorCode=-1
+      goto EXIT
+</PostBuildEvent>
+  </PropertyGroup>
 </Project>
